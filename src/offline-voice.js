@@ -127,13 +127,18 @@ export function createOfflineVoice({ onCommand, onStatus, onHeard, getMicId }) {
       if (!words.length) return;
       const heard = words.filter((w) => w.word !== '[unk]' && w.conf >= MIN_CONFIDENCE).map((w) => w.word);
       onHeard?.(heard.length ? heard.join(' ') : '(bruit ignoré)');
-      if (Date.now() < mutedUntil) return;
       parseCommands(heard.join(' ')).forEach(onCommand);
     });
 
     const source = ctx.createMediaStreamSource(stream);
     const processor = ctx.createScriptProcessor(4096, 1, 1);
-    processor.onaudioprocess = (e) => recognizer?.acceptWaveform(e.inputBuffer);
+    processor.onaudioprocess = (e) => {
+      if (!recognizer) return;
+      // Pendant que l'app parle, la reconnaissance reçoit du silence : elle n'entend jamais
+      // « Marqué » dit par le téléphone, même si son résultat arrive un peu plus tard.
+      if (Date.now() < mutedUntil) recognizer.acceptWaveformFloat(new Float32Array(e.inputBuffer.length), ctx.sampleRate);
+      else recognizer.acceptWaveform(e.inputBuffer);
+    };
     source.connect(processor).connect(ctx.destination);
 
     const track = stream.getAudioTracks()[0];
@@ -175,6 +180,7 @@ export function createOfflineVoice({ onCommand, onStatus, onHeard, getMicId }) {
       teardown();
       start();
     },
+    // Coupe l'écoute pendant ms (l'app parle).
     mute(ms) {
       mutedUntil = Date.now() + ms;
     },

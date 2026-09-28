@@ -4,7 +4,7 @@ import { summarize, splits, overall } from './stats.js';
 import { progressChart, bindChart } from './chart.js';
 import { createVoice, voiceSupported } from './voice.js';
 import { createOfflineVoice, listMics, guessHeadset } from './offline-voice.js';
-import { beep, announce, unlockAudio } from './feedback.js';
+import { say } from './feedback.js';
 import { startCamera } from './camera.js';
 
 const app = document.getElementById('app');
@@ -188,10 +188,11 @@ function shot(made, byVoice = false) {
   lastTap = now;
   store.addShot(made);
   navigator.vibrate?.(made ? 40 : [25, 60, 25]);
-  // Sans regarder l'écran (voix ou caméra), les bips confirment le tir.
   if (voice.active || location.hash === '#/camera') {
-    beep[made ? 'make' : 'miss']();
-    announceEvery10();
+    const r = summarize(store.active.shots);
+    const word = made ? 'Marqué' : 'Raté';
+    // Tous les 10 tirs, on ajoute le score.
+    speak(r.attempts % 10 === 0 ? `${word}. ${r.made} sur ${r.attempts}, ${r.pct} pour cent` : word);
   }
   refresh();
   app.querySelector(made ? '.pad.make' : '.pad.miss')?.classList.add('flash');
@@ -199,16 +200,15 @@ function shot(made, byVoice = false) {
 
 function undoShot() {
   store.undo();
-  if (voice.active || location.hash === '#/camera') beep.undo();
+  if (voice.active || location.hash === '#/camera') speak('Annulé');
   refresh();
 }
 
-// Tous les 10 tirs, l'app annonce le score à voix haute (micro coupé pendant ce temps).
-function announceEvery10() {
-  const r = summarize(store.active.shots);
-  if (r.attempts % 10 !== 0) return;
-  voice.mute(10000);
-  announce(`${r.made} sur ${r.attempts}, ${r.pct} pour cent`, () => voice.mute(600));
+// Confirme à voix haute sans regarder l'écran. Le micro ignore ce que l'app dit elle-même
+// (sinon « Marqué » prononcé par le téléphone serait compté comme un tir).
+function speak(text) {
+  voice.mute(8000); // au cas où la fin de l'annonce ne serait jamais signalée
+  say(text, () => voice.mute(400)); // petite marge pour l'écho de fin
 }
 
 // ---------- Commande vocale ----------
@@ -321,7 +321,6 @@ function voiceBanner() {
 }
 
 function toggleVoice() {
-  unlockAudio();
   if (voice.active) {
     voice.stop();
     localStorage.setItem(VOICE_KEY, '0');
@@ -503,8 +502,7 @@ app.addEventListener('click', (e) => {
   if (!btn) return;
   switch (btn.dataset.action) {
     case 'start':
-      unlockAudio();
-      store.startSession();
+          store.startSession();
       go('#/seance');
       break;
     case 'make':
@@ -520,8 +518,7 @@ app.addEventListener('click', (e) => {
       toggleVoice();
       break;
     case 'camera':
-      unlockAudio();
-      enterLandscape();
+          enterLandscape();
       go('#/camera');
       break;
     case 'cam-exit':
