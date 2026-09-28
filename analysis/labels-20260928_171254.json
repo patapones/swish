@@ -1,0 +1,18 @@
+{
+  "video": "videos/20260928_171254.mp4",
+  "note": "Vérité terrain pour la phase 1. t = moment où le ballon arrive à l'arceau (s). source : voix (annonce captée sur la vidéo) ou image (vérifié image par image).",
+  "rim_px": { "x": 1420, "y": 255, "frame": "1920x1080" },
+  "shots": [
+    { "t": 15.4,  "made": true,  "source": "voix+image" },
+    { "t": 28.7,  "made": false, "source": "image" },
+    { "t": 42.3,  "made": false, "source": "voix+image" },
+    { "t": 70.5,  "made": true,  "source": "voix" },
+    { "t": 83.3,  "made": false, "source": "voix" },
+    { "t": 94.6,  "made": false, "source": "voix" },
+    { "t": 106.7, "made": false, "source": "image" },
+    { "t": 119.9, "made": false, "source": "voix" },
+    { "t": 129.3, "made": false, "source": "voix" },
+    { "t": 160.2, "made": false, "source": "image" },
+    { "t": 171.8, "made": true,  "source": "voix" }
+  ]
+}
