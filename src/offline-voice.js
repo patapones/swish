@@ -20,7 +20,9 @@ const GRAMMAR = JSON.stringify([...COMMANDS, ...DECOYS, '[unk]']);
 // En dessous, on considère que c'était un bruit (rebond, vent…) et on ignore.
 const MIN_CONFIDENCE = 0.6;
 
-const HEADSET = /bluetooth|jabra|headset|casque|écouteur|ecouteur|buds|airpods/i;
+// Par ordre de préférence. « Headset earpiece » (Android) = l'écouteur d'appel du téléphone, pas un casque.
+const HEADSET_PATTERNS = [/bluetooth/i, /jabra|buds|airpods|casque|[ée]couteur/i, /headset/i];
+const NOT_HEADSET = /earpiece|speaker|built-in|default/i;
 
 // Liste des micros disponibles (les noms n'apparaissent qu'après autorisation du micro).
 export async function listMics() {
@@ -29,7 +31,11 @@ export async function listMics() {
 }
 
 export function guessHeadset(mics) {
-  return mics.find((m) => HEADSET.test(m.label))?.deviceId ?? '';
+  for (const pattern of HEADSET_PATTERNS) {
+    const mic = mics.find((m) => pattern.test(m.label) && !NOT_HEADSET.test(m.label));
+    if (mic) return mic.deviceId;
+  }
+  return '';
 }
 
 // Télécharge le modèle une seule fois (mis en cache), avec la progression.
