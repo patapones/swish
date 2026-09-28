@@ -613,3 +613,25 @@ h2 {
     opacity: 0;
   }
 }
+.cam-top-right {
+  display: flex;
+  gap: 8px;
+}
+.cam-btn.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.cam-voice {
+  position: absolute;
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%);
+  margin: 0;
+  max-width: min(90vw, 560px);
+  text-align: center;
+  font-size: 0.9rem;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 6px 12px;
+  border-radius: 10px;
+  pointer-events: none;
+}

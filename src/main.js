@@ -231,6 +231,8 @@ if (engineName === 'google' && !voiceSupported) engineName = 'offline';
 const handlers = {
   onCommand(cmd) {
     if (!store.active) return;
+    // En mode caméra, c'est elle qui compte : « marqué / raté » à la voix compterait le tir deux fois.
+    if (location.hash === '#/camera' && cmd !== 'undo') return;
     if (cmd === 'undo') undoShot();
     else shot(cmd === 'make', true);
   },
@@ -243,7 +245,7 @@ const handlers = {
   onHeard(text) {
     lastHeard = text.trim();
     const el = app.querySelector('[data-heard]');
-    if (el) el.textContent = `Entendu : « ${lastHeard} »`;
+    if (el) el.textContent = `${location.hash === '#/camera' ? ' · ' : ''}Entendu : « ${lastHeard} »`;
   },
 };
 
@@ -321,7 +323,7 @@ function toggleVoice() {
     voice.start();
     localStorage.setItem(VOICE_KEY, '1');
   }
-  renderSession();
+  refresh();
 }
 
 function changeVoiceSetting(name, value) {
@@ -353,9 +355,13 @@ function renderCamera() {
       <div class="cam-top">
         <button class="cam-btn" data-action="cam-exit">← Séance</button>
         <div class="cam-score" data-cam-score></div>
-        <button class="cam-btn" data-action="cam-recal">Recalibrer</button>
+        <span class="cam-top-right">
+          <button class="cam-btn" data-action="voice" data-cam-mic></button>
+          <button class="cam-btn" data-action="cam-recal">Recalibrer</button>
+        </span>
       </div>
       <p class="cam-hint" data-cam-hint>Démarrage de la caméra…</p>
+      <p class="cam-voice" data-cam-voice></p>
       <div class="cam-flash" data-cam-flash hidden></div>
       <div class="cam-bottom">
         <button class="cam-btn" data-action="undo">↶ Annuler</button>
@@ -391,6 +397,16 @@ function updateCameraHud() {
   if (!el) return;
   const r = summarize(store.active.shots);
   el.innerHTML = `<b>${r.made}</b>/${r.attempts} · <b>${r.pct}%</b>`;
+
+  const mic = app.querySelector('[data-cam-mic]');
+  mic.textContent = voice.active ? '🎙 Voix activée' : '🎙 Voix';
+  mic.classList.toggle('on', voice.active);
+  const line = app.querySelector('[data-cam-voice]');
+  line.hidden = !voice.active && voiceStatus !== 'error';
+  line.innerHTML =
+    voiceStatus === 'error' || voiceStatus === 'loading'
+      ? voiceDetail
+      : `Dis <b>« annule »</b> si un tir est mal compté<span data-heard>${lastHeard ? ` · Entendu : « ${lastHeard} »` : ''}</span>`;
 }
 
 let flashTimer = null;
