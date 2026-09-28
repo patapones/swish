@@ -467,3 +467,32 @@ h2 {
   font-size: 0.85rem;
   min-height: 1.2em;
 }
+.voice-banner p {
+  margin: 0;
+}
+.voice-banner.error p {
+  color: var(--miss);
+}
+.voice-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.voice-settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--ink-2);
+  min-width: 0;
+}
+.voice-settings select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 0.9rem;
+}

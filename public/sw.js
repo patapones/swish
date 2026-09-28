@@ -1,12 +1,14 @@
 // Réseau d'abord, cache en secours : toujours la dernière version quand il y a du réseau,
 // et l'app continue de marcher au terrain sans connexion.
-const CACHE = 'swish-v1';
+const CACHE = 'swish-v2';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || !e.request.url.startsWith(self.location.origin)) return;
+  // Le modèle vocal (40 Mo) a son propre cache, géré par l'app : pas de copie en double ici.
+  if (e.request.url.includes('/models/')) return;
   e.respondWith(
     fetch(e.request)
       .then((res) => {

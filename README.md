@@ -5,7 +5,10 @@ App web installable (PWA) pour compter ses tirs à l'entraînement et suivre son
 ## Phase 0 (actuelle) : compteur manuel
 - Boutons **Marqué** / **Raté**, pourcentage en direct, séries, annulation du dernier tir
 - **Commande vocale** : dire « marqué » / « raté » (ou « dedans » / « dehors »), « annule » pour corriger.
-  Bip de confirmation à chaque tir, score annoncé tous les 10 tirs. Nécessite le réseau (reconnaissance Google via Chrome).
+  Bip de confirmation à chaque tir, score annoncé tous les 10 tirs.
+  - Moteur « sur le téléphone » (par défaut) : Vosk + modèle français `vosk-model-small-fr-0.22` (Apache 2.0),
+    sans réseau, micro au choix (écouteurs Bluetooth). Modèle de 42 Mo téléchargé une fois puis mis en cache.
+  - Moteur « Google » (secours) : reconnaissance de Chrome, micro du téléphone uniquement, réseau obligatoire.
 - Écran maintenu allumé pendant la séance, vibration à chaque tir
 - Historique, détail par tranche de 10 tirs, courbe de progression
 - Données stockées sur le téléphone ; export/import JSON pour sauvegarder
@@ -23,7 +26,9 @@ npm run build
 - `src/stats.js` — calculs (pourcentage, séries, tranches), testés dans `stats.test.js`
 - `src/store.js` — stockage local des séances
 - `src/main.js` — écrans (accueil, séance, détail) et actions
-- `src/voice.js` — reconnaissance vocale et mots-clés (testés dans `voice.test.js`)
+- `src/voice.js` — mots-clés (testés dans `voice.test.js`) et moteur Google
+- `src/offline-voice.js` — moteur hors ligne (Vosk), choix du micro, grammaire de mots-clés
+- `public/models/` — modèle vocal français
 - `src/feedback.js` — bips et annonce du score
 - `src/chart.js` — courbe de progression
 - `public/` — manifest, service worker, icônes

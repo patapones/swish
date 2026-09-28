@@ -3,6 +3,7 @@ import { store } from './store.js';
 import { summarize, splits, overall } from './stats.js';
 import { progressChart, bindChart } from './chart.js';
 import { createVoice, voiceSupported } from './voice.js';
+import { createOfflineVoice, listMics, guessHeadset } from './offline-voice.js';
 import { beep, announce, unlockAudio } from './feedback.js';
 
 const app = document.getElementById('app');
@@ -127,7 +128,7 @@ function renderSession() {
       <header class="session-bar">
         <span class="timer" data-timer>${fmtDuration(Date.now() - s.startedAt)}</span>
         ${
-          voiceSupported
+          hasMic
             ? `<button class="ghost mic ${voice.active ? 'on' : ''}" data-action="voice" aria-pressed="${voice.active}">
                 ${voice.active ? '🎙 Voix activée' : '🎙 Voix'}
               </button>`
@@ -189,15 +190,23 @@ function announceEvery10() {
 }
 
 // ---------- Commande vocale ----------
+// Deux moteurs : « hors ligne » (sur le téléphone, accepte le micro des écouteurs)
+// et « google » (celui de Chrome : micro du téléphone uniquement, réseau obligatoire).
 
 const VOICE_KEY = 'swish:voice';
+const ENGINE_KEY = 'swish:engine';
+const MIC_KEY = 'swish:mic';
 const voicePref = () => localStorage.getItem(VOICE_KEY) === '1';
+const hasMic = Boolean(navigator.mediaDevices?.getUserMedia);
 
 let voiceStatus = 'off';
 let voiceDetail = '';
 let lastHeard = '';
+let mics = [];
+let engineName = localStorage.getItem(ENGINE_KEY) || 'offline';
+if (engineName === 'google' && !voiceSupported) engineName = 'offline';
 
-const voice = createVoice({
+const handlers = {
   onCommand(cmd) {
     if (!store.active) return;
     if (cmd === 'undo') undoShot();
@@ -206,22 +215,78 @@ const voice = createVoice({
   onStatus(status, detail = '') {
     voiceStatus = status;
     voiceDetail = detail;
-    if (location.hash === '#/seance' && store.active) renderSession();
+    if (status === 'listening') refreshMics();
+    else if (location.hash === '#/seance' && store.active) renderSession();
   },
   onHeard(text) {
     lastHeard = text.trim();
     const el = app.querySelector('[data-heard]');
     if (el) el.textContent = `Entendu : « ${lastHeard} »`;
   },
-});
+};
+
+const engines = {
+  offline: createOfflineVoice({ ...handlers, getMicId: () => localStorage.getItem(MIC_KEY) || '' }),
+  google: voiceSupported ? createVoice(handlers) : null,
+};
+
+// Façade : le reste de l'app parle à « voice » sans savoir quel moteur tourne.
+const voice = {
+  get active() {
+    return engines[engineName].active;
+  },
+  start: () => engines[engineName].start(),
+  stop: () => engines[engineName].stop(),
+  mute: (ms) => engines[engineName].mute(ms),
+};
+
+// Les noms des micros ne sont connus qu'une fois le micro autorisé.
+async function refreshMics() {
+  try {
+    mics = await listMics();
+  } catch {
+    mics = [];
+  }
+  // Première fois : on choisit tout seul les écouteurs s'ils sont connectés.
+  if (engineName === 'offline' && localStorage.getItem(MIC_KEY) === null) {
+    const headset = guessHeadset(mics);
+    localStorage.setItem(MIC_KEY, headset);
+    if (headset) engines.offline.restart();
+  }
+  if (location.hash === '#/seance' && store.active) renderSession();
+}
+navigator.mediaDevices?.addEventListener?.('devicechange', () => voice.active && refreshMics());
 
 function voiceBanner() {
-  if (voiceStatus === 'error') return `<p class="voice-banner error">${voiceDetail}</p>`;
-  return `<p class="voice-banner">
-      <span class="dot ${voiceStatus === 'listening' ? 'live' : ''}"></span>
-      Dis <b>« marqué »</b> ou <b>« raté »</b> · <b>« annule »</b> pour corriger
-      <span class="heard muted" data-heard>${lastHeard ? `Entendu : « ${lastHeard} »` : ''}</span>
-    </p>`;
+  const micId = localStorage.getItem(MIC_KEY) || '';
+  const settings = `
+    <div class="voice-settings">
+      <label>Moteur
+        <select data-setting="engine">
+          <option value="offline" ${engineName === 'offline' ? 'selected' : ''}>Sur le téléphone (écouteurs OK)</option>
+          ${voiceSupported ? `<option value="google" ${engineName === 'google' ? 'selected' : ''}>Google (micro du téléphone)</option>` : ''}
+        </select>
+      </label>
+      ${
+        engineName === 'offline'
+          ? `<label>Micro
+        <select data-setting="mic">
+          <option value="">Micro par défaut</option>
+          ${mics.map((m) => `<option value="${m.deviceId}" ${m.deviceId === micId ? 'selected' : ''}>${m.label || 'Micro'}</option>`).join('')}
+        </select>
+      </label>`
+          : ''
+      }
+    </div>`;
+
+  if (voiceStatus === 'error') return `<div class="voice-banner error"><p>${voiceDetail}</p>${settings}</div>`;
+  if (voiceStatus === 'loading') return `<div class="voice-banner"><p><span class="dot"></span> ${voiceDetail}</p></div>`;
+  return `<div class="voice-banner">
+      <p><span class="dot ${voiceStatus === 'listening' ? 'live' : ''}"></span>
+      Dis <b>« marqué »</b> ou <b>« raté »</b> · <b>« annule »</b> pour corriger</p>
+      <p class="heard muted" data-heard>${lastHeard ? `Entendu : « ${lastHeard} »` : ''}</p>
+      ${settings}
+    </div>`;
 }
 
 function toggleVoice() {
@@ -233,6 +298,22 @@ function toggleVoice() {
     voiceStatus = 'off';
     voice.start();
     localStorage.setItem(VOICE_KEY, '1');
+  }
+  renderSession();
+}
+
+function changeVoiceSetting(name, value) {
+  if (name === 'engine') {
+    const wasActive = voice.active;
+    if (wasActive) voice.stop();
+    engineName = value;
+    localStorage.setItem(ENGINE_KEY, value);
+    voiceStatus = 'off';
+    if (wasActive || voicePref()) voice.start();
+  } else if (name === 'mic') {
+    localStorage.setItem(MIC_KEY, value);
+    lastHeard = '';
+    engines.offline.restart();
   }
   renderSession();
 }
@@ -324,6 +405,7 @@ app.addEventListener('click', (e) => {
 });
 
 app.addEventListener('change', async (e) => {
+  if (e.target.dataset.setting) return changeVoiceSetting(e.target.dataset.setting, e.target.value);
   if (e.target.dataset.action !== 'import' || !e.target.files[0]) return;
   try {
     const n = store.importJSON(await e.target.files[0].text());
