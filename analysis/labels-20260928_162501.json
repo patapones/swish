@@ -1,0 +1,19 @@
+{
+  "video": "videos/20260928_162501.mp4",
+  "note": "Vérité terrain relevée par le joueur en regardant la vidéo. t = moment où le ballon arrive à l'arceau (s).",
+  "rim_px": { "x": 1503, "y": 162, "w": 95, "frame": "1920x1080" },
+  "shots": [
+    { "t": 17.8,  "made": false },
+    { "t": 31.0,  "made": false },
+    { "t": 40.4,  "made": true },
+    { "t": 52.5,  "made": false },
+    { "t": 63.9,  "made": true },
+    { "t": 72.3,  "made": false },
+    { "t": 102.2, "made": false },
+    { "t": 109.6, "made": false },
+    { "t": 120.9, "made": false },
+    { "t": 145.5, "made": true },
+    { "t": 156.9, "made": true },
+    { "t": 169.5, "made": false }
+  ]
+}
