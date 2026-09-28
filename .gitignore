@@ -1,3 +1,6 @@
 node_modules
 dist
 .DS_Store
+
+# Vidéos d'entraînement : lourdes et personnelles, jamais sur GitHub (dépôt public)
+videos/
