@@ -102,15 +102,21 @@ export function createOfflineVoice({ onCommand, onStatus, onHeard, getMicId }) {
     if (!wanted) return;
 
     const micId = getMicId();
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        ...(micId ? { deviceId: { exact: micId } } : {}),
-        echoCancellation: true, // évite que le micro entende les bips de l'app
-        noiseSuppression: true,
-        autoGainControl: true,
-        channelCount: 1,
-      },
-    });
+    const audio = {
+      echoCancellation: true, // évite que le micro entende les bips de l'app
+      noiseSuppression: true,
+      autoGainControl: true,
+      channelCount: 1,
+    };
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: micId ? { ...audio, deviceId: { exact: micId } } : audio,
+      });
+    } catch (err) {
+      // Micro choisi absent (écouteurs pas connectés) : on prend celui du téléphone.
+      if (!micId || !['OverconstrainedError', 'NotFoundError', 'NotReadableError'].includes(err.name)) throw err;
+      stream = await navigator.mediaDevices.getUserMedia({ audio });
+    }
     if (!wanted) return teardown();
 
     ctx = new AudioContext();

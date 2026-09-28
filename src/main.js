@@ -287,8 +287,8 @@ function voiceBanner() {
     <div class="voice-settings">
       <label>Moteur
         <select data-setting="engine">
-          <option value="offline" ${engineName === 'offline' ? 'selected' : ''}>Sur le téléphone (écouteurs OK)</option>
-          ${voiceSupported ? `<option value="google" ${engineName === 'google' ? 'selected' : ''}>Google (micro du téléphone)</option>` : ''}
+          <option value="offline" ${engineName === 'offline' ? 'selected' : ''}>Sur le téléphone (recommandé)</option>
+          ${voiceSupported ? `<option value="google" ${engineName === 'google' ? 'selected' : ''}>Google (secours, bip Android)</option>` : ''}
         </select>
       </label>
       ${
@@ -308,6 +308,13 @@ function voiceBanner() {
   return `<div class="voice-banner">
       <p><span class="dot ${voiceStatus === 'listening' ? 'live' : ''}"></span>
       Dis <b>« marqué »</b> ou <b>« raté »</b> · <b>« annule »</b> pour corriger</p>
+      ${
+        engineName === 'google'
+          ? '<p class="muted small">Moteur Google : Android fait un bip à chaque relance de l’écoute et couvre les sons de Swish. Préfère « Sur le téléphone ».</p>'
+          : voiceStatus === 'listening' && voiceDetail
+            ? `<p class="muted small">Micro utilisé : ${voiceDetail}</p>`
+            : ''
+      }
       <p class="heard muted" data-heard>${lastHeard ? `Entendu : « ${lastHeard} »` : ''}</p>
       ${settings}
     </div>`;

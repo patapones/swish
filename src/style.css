@@ -635,3 +635,6 @@ h2 {
   border-radius: 10px;
   pointer-events: none;
 }
+.small {
+  font-size: 0.85rem;
+}
