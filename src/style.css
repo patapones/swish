@@ -327,8 +327,15 @@ h2 {
   justify-content: flex-start;
 }
 
-.undo {
-  align-self: center;
+.session-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cam-start {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .pads {
@@ -495,4 +502,114 @@ h2 {
   background: var(--bg);
   color: var(--ink);
   font-size: 0.9rem;
+}
+
+/* ---------- Mode caméra ---------- */
+
+.camera {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  color: #fff;
+  z-index: 10;
+}
+.cam-video,
+.cam-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.cam-overlay {
+  touch-action: none;
+}
+.cam-top,
+.cam-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 10px
+    max(12px, env(safe-area-inset-left));
+  pointer-events: none;
+}
+.cam-top {
+  top: 0;
+  justify-content: space-between;
+  background: linear-gradient(rgba(0, 0, 0, 0.55), transparent);
+}
+.cam-bottom {
+  bottom: 0;
+  justify-content: flex-end;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+}
+.cam-btn {
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cam-btn.make {
+  background: var(--make);
+  border-color: var(--make);
+}
+.cam-btn.miss {
+  background: var(--miss);
+  border-color: var(--miss);
+}
+.cam-bottom .cam-btn:first-child {
+  margin-right: auto;
+}
+.cam-manual {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+.cam-score {
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.cam-hint {
+  position: absolute;
+  left: 50%;
+  top: 64px;
+  transform: translateX(-50%);
+  margin: 0;
+  max-width: min(90vw, 520px);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 8px 14px;
+  border-radius: 12px;
+  pointer-events: none;
+}
+.cam-flash {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(2.5rem, 12vw, 5rem);
+  font-weight: 900;
+  padding: 8px 28px;
+  border-radius: 20px;
+  pointer-events: none;
+  animation: flash-in 0.25s ease-out;
+}
+.cam-flash.make {
+  background: var(--make);
+}
+.cam-flash.miss {
+  background: var(--miss);
+}
+@keyframes flash-in {
+  from {
+    transform: translate(-50%, -50%) scale(0.7);
+    opacity: 0;
+  }
 }

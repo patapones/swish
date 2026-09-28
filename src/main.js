@@ -5,6 +5,7 @@ import { progressChart, bindChart } from './chart.js';
 import { createVoice, voiceSupported } from './voice.js';
 import { createOfflineVoice, listMics, guessHeadset } from './offline-voice.js';
 import { beep, announce, unlockAudio } from './feedback.js';
+import { startCamera } from './camera.js';
 
 const app = document.getElementById('app');
 
@@ -17,13 +18,23 @@ const fmtDuration = (ms) => {
   return `${m}:${String(s).padStart(2, '0')}`;
 };
 
-// ---------- Routage (#/, #/seance, #/s/<id>) ----------
+// ---------- Routage (#/, #/seance, #/camera, #/s/<id>) ----------
+
+const LIVE = ['#/seance', '#/camera']; // écrans de séance en cours
 
 function route() {
   stopTimer();
   releaseWakeLock();
+  stopCamera();
   const hash = location.hash || '#/';
-  if (hash !== '#/seance' && voice.active) voice.stop();
+  if (!LIVE.includes(hash) && voice.active) voice.stop();
+  if (hash === '#/camera') {
+    if (!store.active) return go('#/');
+    if (voicePref() && !voice.active) voice.start();
+    renderCamera();
+    requestWakeLock();
+    return;
+  }
   if (hash === '#/seance') {
     if (!store.active) return go('#/');
     if (voicePref() && !voice.active) voice.start();
@@ -46,6 +57,13 @@ function go(hash) {
 }
 
 window.addEventListener('hashchange', route);
+
+// Met à jour l'écran de séance affiché après un tir ou un changement de la voix.
+function refresh() {
+  if (!store.active) return;
+  if (location.hash === '#/camera') updateCameraHud();
+  else if (location.hash === '#/seance') renderSession();
+}
 
 // ---------- Accueil ----------
 
@@ -151,7 +169,10 @@ function renderSession() {
         </div>
       </section>
 
-      <button class="ghost undo" data-action="undo" ${s.shots.length ? '' : 'disabled'}>↶ Annuler le dernier tir</button>
+      <div class="session-actions">
+        <button class="ghost" data-action="undo" ${s.shots.length ? '' : 'disabled'}>↶ Annuler</button>
+        ${hasCamera ? '<button class="ghost cam-start" data-action="camera">📷 Compter avec la caméra</button>' : ''}
+      </div>
 
       <div class="pads">
         <button class="pad miss" data-action="miss">Raté</button>
@@ -167,18 +188,19 @@ function shot(made, byVoice = false) {
   lastTap = now;
   store.addShot(made);
   navigator.vibrate?.(made ? 40 : [25, 60, 25]);
-  if (voice.active) {
+  // Sans regarder l'écran (voix ou caméra), les bips confirment le tir.
+  if (voice.active || location.hash === '#/camera') {
     beep[made ? 'make' : 'miss']();
     announceEvery10();
   }
-  renderSession();
-  app.querySelector(made ? '.make' : '.miss')?.classList.add('flash');
+  refresh();
+  app.querySelector(made ? '.pad.make' : '.pad.miss')?.classList.add('flash');
 }
 
 function undoShot() {
   store.undo();
-  if (voice.active) beep.undo();
-  renderSession();
+  if (voice.active || location.hash === '#/camera') beep.undo();
+  refresh();
 }
 
 // Tous les 10 tirs, l'app annonce le score à voix haute (micro coupé pendant ce temps).
@@ -216,7 +238,7 @@ const handlers = {
     voiceStatus = status;
     voiceDetail = detail;
     if (status === 'listening') refreshMics();
-    else if (location.hash === '#/seance' && store.active) renderSession();
+    else refresh();
   },
   onHeard(text) {
     lastHeard = text.trim();
@@ -253,7 +275,7 @@ async function refreshMics() {
     localStorage.setItem(MIC_KEY, headset);
     if (headset) engines.offline.restart();
   }
-  if (location.hash === '#/seance' && store.active) renderSession();
+  refresh();
 }
 navigator.mediaDevices?.addEventListener?.('devicechange', () => voice.active && refreshMics());
 
@@ -316,6 +338,94 @@ function changeVoiceSetting(name, value) {
     engines.offline.restart();
   }
   renderSession();
+}
+
+// ---------- Mode caméra ----------
+
+const hasCamera = Boolean(navigator.mediaDevices?.getUserMedia);
+let camera = null;
+
+function renderCamera() {
+  app.innerHTML = `
+    <div class="camera">
+      <video class="cam-video" playsinline muted></video>
+      <canvas class="cam-overlay"></canvas>
+      <div class="cam-top">
+        <button class="cam-btn" data-action="cam-exit">← Séance</button>
+        <div class="cam-score" data-cam-score></div>
+        <button class="cam-btn" data-action="cam-recal">Recalibrer</button>
+      </div>
+      <p class="cam-hint" data-cam-hint>Démarrage de la caméra…</p>
+      <div class="cam-flash" data-cam-flash hidden></div>
+      <div class="cam-bottom">
+        <button class="cam-btn" data-action="undo">↶ Annuler</button>
+        <span class="cam-manual">Oublié :</span>
+        <button class="cam-btn miss" data-action="miss">Raté</button>
+        <button class="cam-btn make" data-action="make">Marqué</button>
+      </div>
+    </div>`;
+  updateCameraHud();
+  const hint = (text) => {
+    const el = app.querySelector('[data-cam-hint]');
+    if (el) el.textContent = window.innerHeight > window.innerWidth ? `Mets le téléphone à l'horizontale. ${text}` : text;
+  };
+  startCamera(app.querySelector('.camera'), {
+    onShot(made) {
+      if (!store.active) return;
+      shot(made, true);
+      flashResult(made);
+    },
+    onStatus: hint,
+  })
+    .then((c) => {
+      if (location.hash === '#/camera') camera = c;
+      else c.stop(); // on a quitté l'écran pendant le démarrage
+    })
+    .catch((err) =>
+      hint(err?.name === 'NotAllowedError' ? 'Caméra refusée : autorise-la dans les réglages du site.' : `Caméra indisponible (${err?.message ?? err}).`),
+    );
+}
+
+function updateCameraHud() {
+  const el = app.querySelector('[data-cam-score]');
+  if (!el) return;
+  const r = summarize(store.active.shots);
+  el.innerHTML = `<b>${r.made}</b>/${r.attempts} · <b>${r.pct}%</b>`;
+}
+
+let flashTimer = null;
+function flashResult(made) {
+  const el = app.querySelector('[data-cam-flash]');
+  if (!el) return;
+  el.textContent = made ? 'MARQUÉ' : 'RATÉ';
+  el.className = `cam-flash ${made ? 'make' : 'miss'}`;
+  el.hidden = false;
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => (el.hidden = true), 1200);
+}
+
+function stopCamera() {
+  camera?.stop();
+  camera = null;
+}
+
+// Plein écran + paysage : le téléphone est posé à l'horizontale sur le trépied.
+async function enterLandscape() {
+  try {
+    await document.documentElement.requestFullscreen?.();
+    await screen.orientation?.lock?.('landscape');
+  } catch {
+    // pas grave : la consigne à l'écran demande de tourner le téléphone
+  }
+}
+
+function exitLandscape() {
+  try {
+    screen.orientation?.unlock?.();
+    if (document.fullscreenElement) document.exitFullscreen();
+  } catch {
+    // rien à faire
+  }
 }
 
 // ---------- Détail d'une séance ----------
@@ -386,6 +496,18 @@ app.addEventListener('click', (e) => {
     case 'voice':
       toggleVoice();
       break;
+    case 'camera':
+      unlockAudio();
+      enterLandscape();
+      go('#/camera');
+      break;
+    case 'cam-exit':
+      exitLandscape();
+      go('#/seance');
+      break;
+    case 'cam-recal':
+      camera?.recalibrate();
+      break;
     case 'end': {
       if (store.active.shots.length && !confirm('Terminer la séance ?')) return;
       const done = store.endSession();
@@ -454,7 +576,7 @@ function releaseWakeLock() {
 
 // Le verrou saute quand l'app passe en arrière-plan : on le reprend au retour.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && location.hash === '#/seance') requestWakeLock();
+  if (document.visibilityState === 'visible' && LIVE.includes(location.hash)) requestWakeLock();
 });
 
 // ---------- Mode hors ligne ----------
