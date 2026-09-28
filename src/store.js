@@ -1,7 +1,7 @@
 // Stockage local (sur le téléphone uniquement). La séance en cours est sauvegardée
 // à chaque tir, donc rien n'est perdu si le navigateur se ferme.
 
-const KEY = 'splash:v1';
+const KEY = 'swish:v1';
 
 function empty() {
   return { version: 1, sessions: [], active: null };

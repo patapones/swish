@@ -417,3 +417,53 @@ h2 {
   font-weight: 600;
   cursor: pointer;
 }
+
+/* ---------- Commande vocale ---------- */
+
+.session-bar {
+  gap: 8px;
+}
+.session-bar .timer {
+  margin-right: auto;
+}
+.mic.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.voice-banner {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+.voice-banner.error {
+  border-color: var(--miss);
+  color: var(--miss);
+}
+.voice-banner .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--ink-2);
+  vertical-align: middle;
+}
+.voice-banner .dot.live {
+  background: var(--miss);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+.voice-banner .heard {
+  display: block;
+  font-size: 0.85rem;
+  min-height: 1.2em;
+}

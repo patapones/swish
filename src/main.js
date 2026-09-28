@@ -2,6 +2,8 @@ import './style.css';
 import { store } from './store.js';
 import { summarize, splits, overall } from './stats.js';
 import { progressChart, bindChart } from './chart.js';
+import { createVoice, voiceSupported } from './voice.js';
+import { beep, announce, unlockAudio } from './feedback.js';
 
 const app = document.getElementById('app');
 
@@ -20,8 +22,10 @@ function route() {
   stopTimer();
   releaseWakeLock();
   const hash = location.hash || '#/';
+  if (hash !== '#/seance' && voice.active) voice.stop();
   if (hash === '#/seance') {
     if (!store.active) return go('#/');
+    if (voicePref() && !voice.active) voice.start();
     renderSession();
     timer = setInterval(() => {
       const el = app.querySelector('[data-timer]');
@@ -54,7 +58,7 @@ function renderHome() {
 
   app.innerHTML = `
     <header class="top">
-      <h1>Splash</h1>
+      <h1>Swish</h1>
       <span class="muted">Tirs à 3 points</span>
     </header>
 
@@ -92,7 +96,7 @@ function renderHome() {
           .join('')}
       </ul>
     </section>`
-        : `<p class="muted intro">Lance ta première séance : tape <b>Marqué</b> ou <b>Raté</b> après chaque tir, l'app calcule ton pourcentage et suit ta progression.</p>`
+        : `<p class="muted intro">Lance ta première séance : après chaque tir, tape <b>Marqué</b> ou <b>Raté</b>, ou active la <b>voix</b> et dis-le simplement. L'app calcule ton pourcentage et suit ta progression.</p>`
     }
 
     <footer class="backup">
@@ -122,8 +126,16 @@ function renderSession() {
     <div class="session">
       <header class="session-bar">
         <span class="timer" data-timer>${fmtDuration(Date.now() - s.startedAt)}</span>
+        ${
+          voiceSupported
+            ? `<button class="ghost mic ${voice.active ? 'on' : ''}" data-action="voice" aria-pressed="${voice.active}">
+                ${voice.active ? '🎙 Voix activée' : '🎙 Voix'}
+              </button>`
+            : ''
+        }
         <button class="ghost" data-action="end">Terminer</button>
       </header>
+      ${voice.active || voiceStatus === 'error' ? voiceBanner() : ''}
 
       <section class="scoreboard" aria-live="polite">
         <div class="big-pct">${r.pct}<small>%</small></div>
@@ -147,15 +159,82 @@ function renderSession() {
     </div>`;
 }
 
-function shot(made) {
-  // Anti double-tap : ignore un 2e appui dans les 300 ms.
+function shot(made, byVoice = false) {
+  // Anti double-tap : ignore un 2e appui dans les 300 ms (pas pour la voix : « raté raté » = 2 tirs).
   const now = Date.now();
-  if (now - lastTap < 300) return;
+  if (!byVoice && now - lastTap < 300) return;
   lastTap = now;
   store.addShot(made);
   navigator.vibrate?.(made ? 40 : [25, 60, 25]);
+  if (voice.active) {
+    beep[made ? 'make' : 'miss']();
+    announceEvery10();
+  }
   renderSession();
   app.querySelector(made ? '.make' : '.miss')?.classList.add('flash');
+}
+
+function undoShot() {
+  store.undo();
+  if (voice.active) beep.undo();
+  renderSession();
+}
+
+// Tous les 10 tirs, l'app annonce le score à voix haute (micro coupé pendant ce temps).
+function announceEvery10() {
+  const r = summarize(store.active.shots);
+  if (r.attempts % 10 !== 0) return;
+  voice.mute(10000);
+  announce(`${r.made} sur ${r.attempts}, ${r.pct} pour cent`, () => voice.mute(600));
+}
+
+// ---------- Commande vocale ----------
+
+const VOICE_KEY = 'swish:voice';
+const voicePref = () => localStorage.getItem(VOICE_KEY) === '1';
+
+let voiceStatus = 'off';
+let voiceDetail = '';
+let lastHeard = '';
+
+const voice = createVoice({
+  onCommand(cmd) {
+    if (!store.active) return;
+    if (cmd === 'undo') undoShot();
+    else shot(cmd === 'make', true);
+  },
+  onStatus(status, detail = '') {
+    voiceStatus = status;
+    voiceDetail = detail;
+    if (location.hash === '#/seance' && store.active) renderSession();
+  },
+  onHeard(text) {
+    lastHeard = text.trim();
+    const el = app.querySelector('[data-heard]');
+    if (el) el.textContent = `Entendu : « ${lastHeard} »`;
+  },
+});
+
+function voiceBanner() {
+  if (voiceStatus === 'error') return `<p class="voice-banner error">${voiceDetail}</p>`;
+  return `<p class="voice-banner">
+      <span class="dot ${voiceStatus === 'listening' ? 'live' : ''}"></span>
+      Dis <b>« marqué »</b> ou <b>« raté »</b> · <b>« annule »</b> pour corriger
+      <span class="heard muted" data-heard>${lastHeard ? `Entendu : « ${lastHeard} »` : ''}</span>
+    </p>`;
+}
+
+function toggleVoice() {
+  unlockAudio();
+  if (voice.active) {
+    voice.stop();
+    localStorage.setItem(VOICE_KEY, '0');
+  } else {
+    voiceStatus = 'off';
+    voice.start();
+    localStorage.setItem(VOICE_KEY, '1');
+  }
+  renderSession();
 }
 
 // ---------- Détail d'une séance ----------
@@ -210,6 +289,7 @@ app.addEventListener('click', (e) => {
   if (!btn) return;
   switch (btn.dataset.action) {
     case 'start':
+      unlockAudio();
       store.startSession();
       go('#/seance');
       break;
@@ -220,8 +300,10 @@ app.addEventListener('click', (e) => {
       shot(false);
       break;
     case 'undo':
-      store.undo();
-      renderSession();
+      undoShot();
+      break;
+    case 'voice':
+      toggleVoice();
       break;
     case 'end': {
       if (store.active.shots.length && !confirm('Terminer la séance ?')) return;
@@ -247,18 +329,18 @@ app.addEventListener('change', async (e) => {
     const n = store.importJSON(await e.target.files[0].text());
     alert(`${n} séance${n > 1 ? 's' : ''} importée${n > 1 ? 's' : ''}.`);
   } catch {
-    alert("Ce fichier n'est pas une sauvegarde Splash valide.");
+    alert("Ce fichier n'est pas une sauvegarde Swish valide.");
   }
   route();
 });
 
 async function exportData() {
-  const name = `splash-${new Date().toISOString().slice(0, 10)}.json`;
+  const name = `swish-${new Date().toISOString().slice(0, 10)}.json`;
   const file = new File([store.exportJSON()], name, { type: 'application/json' });
   // Sur Android : feuille de partage (Drive, mail…). Sinon : téléchargement.
   if (navigator.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title: 'Sauvegarde Splash' });
+      await navigator.share({ files: [file], title: 'Sauvegarde Swish' });
       return;
     } catch (err) {
       if (err.name === 'AbortError') return;
