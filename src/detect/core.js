@@ -7,6 +7,7 @@
 const FPS = 30; // cadence de référence des seuils de vitesse
 const DIFF = 22; // écart de gris pour qu'un pixel soit « en mouvement »
 const OCCLUSION = 0.15; // au-delà, quelqu'un passe devant la caméra
+const EXPOSURE = 6; // écart moyen de gris : la caméra a changé d'exposition (ou un nuage passe)
 const LOST_AFTER = 0.2; // s sans voir le ballon : trajectoire terminée
 const MERGE = 2.5; // s : morceaux de trajectoire d'un même tir
 const SETTLE = 3; // s après le tir avant de rendre le verdict
@@ -134,6 +135,13 @@ export function judge(tr, rim) {
   const aboveRim = tr.filter((p) => Math.abs(p.x - cx) < 2.5 * rw && p.y < cy - 0.2 * rw);
   // Un vrai tir se voit plusieurs images au-dessus du cercle ; sinon : joueur, ballon au sol, reflet…
   if (aboveRim.length < 3) return null;
+  // Un ballon tiré bouge : une tache immobile (nuage, changement de lumière) n'est pas un tir.
+  let movingSteps = 0;
+  for (let i = 1; i < tr.length; i++) {
+    const frames = (tr[i].t - tr[i - 1].t) * FPS;
+    if (Math.hypot(tr[i].x - tr[i - 1].x, tr[i].y - tr[i - 1].y) / frames > 0.08 * rw) movingSteps++;
+  }
+  if (movingSteps < 4) return null;
   const above = aboveRim[0];
   let made = false;
   for (let i = 1; i < tr.length; i++) {
@@ -160,6 +168,7 @@ export function createDetector(rim, roi, scale) {
   let bg = null;
   let active = [];
   let pending = null; // tir en cours de regroupement
+  let quietUntil = -1; // après un changement de lumière, on ne cherche pas de ballon
 
   function finishTrack(tr, out) {
     if (tr.length < 4) return;
@@ -179,6 +188,14 @@ export function createDetector(rim, roi, scale) {
     push(gray, t) {
       const out = [];
       if (!bg) bg = Float32Array.from(gray);
+      // Toute l'image s'éclaircit ou s'assombrit d'un coup (exposition automatique, nuage) :
+      // on repart de cette image comme fond, sinon le ciel entier ressemble à des ballons.
+      let shift = 0;
+      for (let i = 0; i < gray.length; i++) shift += gray[i] - bg[i];
+      if (Math.abs(shift / gray.length) > EXPOSURE) {
+        bg = Float32Array.from(gray);
+        quietUntil = t + 0.5; // le temps que l'image se stabilise
+      }
       const mask = new Uint8Array(W * H);
       for (let i = 0; i < mask.length; i++) {
         mask[i] = gray[i] < bg[i] && bg[i] - gray[i] > DIFF ? 1 : 0; // le ballon assombrit le ciel
@@ -186,7 +203,7 @@ export function createDetector(rim, roi, scale) {
       const fg = open(mask, W, H);
       let moving = 0;
       for (let i = 0; i < fg.length; i++) moving += fg[i];
-      const occluded = moving / fg.length > OCCLUSION;
+      const occluded = moving / fg.length > OCCLUSION || t < quietUntil;
 
       const pts = occluded
         ? []
