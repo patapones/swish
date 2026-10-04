@@ -110,6 +110,24 @@ function heldByNet(tr, i, rim) {
   return false;
 }
 
+// Vitesse de descente entre deux points, en px par image (à 30 i/s).
+const fall = (a, b) => (b.y - a.y) / ((b.t - a.t) * FPS);
+
+// Le ballon traverse le filet nettement moins vite qu'il n'est arrivé (swish compris).
+// Un ballon qui tombe devant ou derrière le cercle, lui, accélère.
+function brakedByNet(tr, i, rim) {
+  const { x: cx, y: cy, w: rw } = rim;
+  const k = Math.max(0, i - 3);
+  if (i - k < 2) return false;
+  const vIn = fall(tr[k], tr[i]);
+  if (vIn < 0.15 * rw) return false; // pas vraiment en train de descendre
+  for (let j = i + 1; j < tr.length; j++) {
+    if (tr[j].t > tr[i].t + 0.5 || Math.abs(tr[j].x - cx) > 0.6 * rw) return false;
+    if (tr[j].y > cy + 0.8 * rw) return fall(tr[i], tr[j]) < 0.6 * vIn; // sortie du filet
+  }
+  return false;
+}
+
 // Une trajectoire terminée : null si ce n'est pas un tir, sinon { t, made }.
 export function judge(tr, rim) {
   const { x: cx, y: cy, w: rw } = rim;
@@ -125,7 +143,7 @@ export function judge(tr, rim) {
     const xCross = a.x + ((cy - a.y) / (b.y - a.y)) * (b.x - a.x);
     // Vu de côté, un ballon qui tombe devant/derrière le cercle semble aussi le traverser :
     // seul le freinage par le filet prouve qu'il est rentré.
-    if (Math.abs(xCross - cx) < 0.45 * rw && heldByNet(tr, i, rim)) {
+    if (Math.abs(xCross - cx) < 0.45 * rw && (heldByNet(tr, i, rim) || brakedByNet(tr, i, rim))) {
       const bouncedOut = tr.some((p) => p.t > b.t + 0.3 && p.y < cy - 0.3 * rw);
       if (!bouncedOut) made = true;
     }

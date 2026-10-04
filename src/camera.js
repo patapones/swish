@@ -3,6 +3,7 @@
 // 2. à chaque image, la zone autour du cercle passe dans le détecteur (src/detect/core.js).
 
 import { createDetector, roiFor, scaleFor } from './detect/core.js';
+import { findRim } from './detect/rim.js';
 
 const RIM_KEY = 'swish:rim';
 
@@ -64,7 +65,9 @@ export async function startCamera(root, { onShot, onStatus }) {
   await video.play();
 
   let rim = loadRim(video.videoWidth, video.videoHeight);
-  let calib = rim ? null : []; // points touchés pendant le calibrage
+  // Calibrage : un toucher approximatif suffit (le cercle est trouvé par sa couleur) ;
+  // à défaut, on touche ses bords gauche et droit. null = calibré.
+  let calib = null;
   let proc = null;
   let lastBall = null;
   let stopped = false;
@@ -78,9 +81,32 @@ export async function startCamera(root, { onShot, onStatus }) {
   }
 
   function askCalibration() {
-    calib = [];
+    calib = { manual: false, points: [] };
     proc = null;
-    onStatus('Touche le bord GAUCHE du cercle.');
+    onStatus('Touche le cercle du panier (pas besoin d’être précis).');
+  }
+
+  function useRim(r) {
+    rim = { ...r, vw: video.videoWidth, vh: video.videoHeight };
+    localStorage.setItem(RIM_KEY, JSON.stringify(rim));
+    calib = null;
+    setup();
+  }
+
+  // Cherche le cercle dans une fenêtre autour du toucher, sur l'image en pleine résolution.
+  function autoRim(p) {
+    const R = Math.round(0.12 * video.videoWidth);
+    const x0 = Math.max(0, Math.round(p.x - R));
+    const y0 = Math.max(0, Math.round(p.y - R));
+    const W = Math.min(video.videoWidth, Math.round(p.x + R)) - x0;
+    const H = Math.min(video.videoHeight, Math.round(p.y + R)) - y0;
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const cx = c.getContext('2d', { willReadFrequently: true });
+    cx.drawImage(video, x0, y0, W, H, 0, 0, W, H);
+    const r = findRim(cx.getImageData(0, 0, W, H).data, W, H, { x: p.x - x0, y: p.y - y0 });
+    return r && r.w >= 24 ? { x: r.x + x0, y: r.y + y0, w: r.w } : null;
   }
 
   if (rim) setup();
@@ -90,22 +116,32 @@ export async function startCamera(root, { onShot, onStatus }) {
     if (!calib) return;
     const p = toVideo(video, e.clientX, e.clientY);
     if (p.x < 0 || p.y < 0 || p.x > video.videoWidth || p.y > video.videoHeight) return;
-    calib.push(p);
-    if (calib.length === 1) {
+
+    if (!calib.manual) {
+      const found = autoRim(p);
+      if (found) {
+        useRim(found);
+        onStatus('Cercle trouvé. Si l’ellipse orange n’est pas sur le cercle, touche « Recalibrer ».');
+      } else {
+        calib = { manual: true, points: [] };
+        onStatus('Cercle non trouvé automatiquement. Touche son bord GAUCHE, puis son bord DROIT.');
+      }
+      return;
+    }
+
+    calib.points.push(p);
+    if (calib.points.length === 1) {
       onStatus('Touche le bord DROIT du cercle.');
       return;
     }
-    const [a, b] = calib;
+    const [a, b] = calib.points;
     const w = Math.abs(b.x - a.x);
     if (w < 24) {
       onStatus('Cercle trop petit à l’image : rapproche le téléphone. Touche le bord GAUCHE.');
-      calib = [];
+      calib.points = [];
       return;
     }
-    rim = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, w, vw: video.videoWidth, vh: video.videoHeight };
-    localStorage.setItem(RIM_KEY, JSON.stringify(rim));
-    calib = null;
-    setup();
+    useRim({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, w });
   }
   overlay.addEventListener('pointerdown', onTap);
 
@@ -126,7 +162,7 @@ export async function startCamera(root, { onShot, onStatus }) {
     octx.lineWidth = 3;
     if (calib) {
       octx.fillStyle = '#ff7a2e';
-      calib.forEach((p) => {
+      calib.points.forEach((p) => {
         octx.beginPath();
         octx.arc(X(p.x), Y(p.y), 8, 0, Math.PI * 2);
         octx.fill();

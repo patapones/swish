@@ -6,12 +6,16 @@ import { createDetector, roiFor, scaleFor } from '../src/detect/core.js';
 
 const [video, labelsPath] = process.argv.slice(2);
 const ffmpeg = process.argv.includes('--ffmpeg') ? process.argv[process.argv.indexOf('--ffmpeg') + 1] : 'ffmpeg';
-const labels = JSON.parse(readFileSync(labelsPath, 'utf8'));
+// labelsPath « - » : pas de vérité terrain, on affiche seulement les tirs détectés (--rim obligatoire)
+const labels = labelsPath === '-' ? { shots: [], rim_px: null } : JSON.parse(readFileSync(labelsPath, 'utf8'));
 // --height 720 : simule une caméra qui filme en 720p au lieu de 1080p
 const outH = process.argv.includes('--height') ? +process.argv[process.argv.indexOf('--height') + 1] : 1080;
 const k = outH / 1080;
 const outW = Math.round(1920 * k);
-const rim = { x: labels.rim_px.x * k, y: labels.rim_px.y * k, w: labels.rim_px.w * k };
+// --rim x,y,w : remplace le cercle de la vérité terrain (ex. celui trouvé automatiquement)
+const rimArg = process.argv.includes('--rim') ? process.argv[process.argv.indexOf('--rim') + 1].split(',').map(Number) : null;
+const base = rimArg ? { x: rimArg[0], y: rimArg[1], w: rimArg[2] } : labels.rim_px;
+const rim = { x: base.x * k, y: base.y * k, w: base.w * k };
 const roi = roiFor(rim, outW, outH);
 const scale = scaleFor(rim);
 const det = createDetector(rim, roi, scale);
@@ -36,6 +40,12 @@ proc.stdout.on('data', (chunk) => {
 });
 proc.on('close', () => {
   shots.push(...det.flush(frame / 30));
+  if (labelsPath === '-') {
+    const fmt = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`;
+    shots.forEach((d) => console.log(`${fmt(d.t)} ${d.made ? 'M' : 'R'}`));
+    console.log(`\n${video} : ${shots.length} tirs, ${shots.filter((d) => d.made).length} marqués`);
+    return;
+  }
   const used = new Set();
   let ok = 0;
   for (const s of labels.shots) {
