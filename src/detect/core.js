@@ -143,17 +143,20 @@ export function judge(tr, rim) {
   }
   if (movingSteps < 4) return null;
   const above = aboveRim[0];
+  // On juge le DERNIER passage vers le bas à travers le plan du cercle : un ballon peut plonger
+  // dans le cercle, rebondir sur l'arceau, rouler dessus puis tomber à l'extérieur.
+  let last = -1;
+  for (let i = 1; i < tr.length; i++) if (tr[i - 1].y < cy && cy <= tr[i].y) last = i;
   let made = false;
-  for (let i = 1; i < tr.length; i++) {
-    const a = tr[i - 1];
-    const b = tr[i];
-    if (!(a.y < cy && cy <= b.y)) continue; // descente qui traverse le plan du cercle
+  if (last > 0) {
+    const a = tr[last - 1];
+    const b = tr[last];
     const xCross = a.x + ((cy - a.y) / (b.y - a.y)) * (b.x - a.x);
     // Vu de côté, un ballon qui tombe devant/derrière le cercle semble aussi le traverser :
     // seul le freinage par le filet prouve qu'il est rentré.
-    if (Math.abs(xCross - cx) < 0.45 * rw && (heldByNet(tr, i, rim) || brakedByNet(tr, i, rim))) {
+    if (Math.abs(xCross - cx) < 0.45 * rw && (heldByNet(tr, last, rim) || brakedByNet(tr, last, rim))) {
       const bouncedOut = tr.some((p) => p.t > b.t + 0.3 && p.y < cy - 0.3 * rw);
-      if (!bouncedOut) made = true;
+      made = !bouncedOut;
     }
   }
   return { t: above.t, made };
