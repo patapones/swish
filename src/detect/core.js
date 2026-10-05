@@ -135,6 +135,9 @@ export function judge(tr, rim) {
   const aboveRim = tr.filter((p) => Math.abs(p.x - cx) < 2.5 * rw && p.y < cy - 0.2 * rw);
   // Un vrai tir se voit plusieurs images au-dessus du cercle ; sinon : joueur, ballon au sol, reflet…
   if (aboveRim.length < 3) return null;
+  // Tir de loin uniquement : le ballon doit arriver par le haut. Un ballon qui apparaît sous
+  // le cercle et monte vers lui (lay-up, tir sous le panier, remise après rebond) est ignoré.
+  if (tr[0].y > cy - 0.2 * rw) return null;
   // Un ballon tiré bouge : une tache immobile (nuage, changement de lumière) n'est pas un tir.
   let movingSteps = 0;
   for (let i = 1; i < tr.length; i++) {

@@ -18,6 +18,10 @@ describe('judge', () => {
     const tr = path([[380, 150], [410, 190], [440, 230], [470, 270], [490, 290], [470, 250], [450, 220], [430, 200], [410, 190], [390, 200], [370, 230]]);
     expect(judge(tr, rim)).toMatchObject({ made: false });
   });
+  it('ignoré : tir de près, le ballon monte depuis le dessous du cercle', () => {
+    const tr = path([[440, 420], [450, 380], [460, 340], [470, 300], [480, 260], [490, 240], [495, 250], [498, 280], [499, 300], [500, 305], [500, 310], [501, 330], [502, 360]]);
+    expect(judge(tr, rim)).toBeNull();
+  });
   it("pas un tir : ne passe jamais au-dessus du cercle", () => {
     const tr = path([[200, 500], [220, 480], [240, 470], [260, 480]]);
     expect(judge(tr, rim)).toBeNull();

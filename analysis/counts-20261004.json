@@ -1,14 +1,140 @@
 {
-  "note": "Séance du 04/10/2026 (filet en chaînes, ciel nuageux, 2e appareil). Totaux relevés par le joueur ; Swish = détecteur après corrections du 05/10. 115650 : 30 tirs à 3 pts (7 marqués) + 3 tirs sous le cercle en fin de vidéo (raté, marqué, marqué).",
+  "note": "Séance du 04/10/2026 (filet en chaînes, ciel nuageux, 2e appareil). Totaux relevés par le joueur ; Swish = détecteur après corrections du 05/10 (tirs de près ignorés). Vérité = tirs à 3 pts uniquement. 115650 : 30 tirs à 3 pts (7 marqués) + 3 tirs sous le cercle en fin de vidéo (raté, marqué, marqué).",
   "videos": {
-    "VID_20261004_112708": { "rim_px": [1264, 240, 69], "truth": [20, 2], "swish": [21, 2] },
-    "VID_20261004_113415": { "rim_px": [512, 402, 93], "truth": [9, 4], "swish": [9, 4] },
-    "VID_20261004_113654": { "rim_px": [551, 419, 86], "truth": [10, 5], "swish": [10, 5] },
-    "VID_20261004_113942": { "rim_px": [481, 384, 90], "truth": [19, 3], "swish": [19, 3] },
-    "VID_20261004_114443": { "rim_px": [499, 386, 86], "truth": [30, 10], "swish": [30, 10] },
-    "VID_20261004_115151": { "rim_px": [516, 398, 85], "truth": [20, 3], "swish": [20, 3] },
-    "VID_20261004_115650": { "rim_px": [522, 402, 84], "truth": [33, 9], "swish": [32, 8] },
-    "VID_20261004_120328": { "rim_px": [524, 407, 87], "truth": [49, 15], "swish": [49, 15] },
-    "VID_20261004_121420": { "rim_px": [543, 408, 82], "truth": [10, 6], "swish": [10, 6] }
+    "VID_20261004_112708": {
+      "rim_px": [
+        1264,
+        240,
+        69
+      ],
+      "truth": [
+        20,
+        2
+      ],
+      "swish": [
+        20,
+        2
+      ]
+    },
+    "VID_20261004_113415": {
+      "rim_px": [
+        512,
+        402,
+        93
+      ],
+      "truth": [
+        9,
+        4
+      ],
+      "swish": [
+        9,
+        4
+      ]
+    },
+    "VID_20261004_113654": {
+      "rim_px": [
+        551,
+        419,
+        86
+      ],
+      "truth": [
+        10,
+        5
+      ],
+      "swish": [
+        10,
+        5
+      ]
+    },
+    "VID_20261004_113942": {
+      "rim_px": [
+        481,
+        384,
+        90
+      ],
+      "truth": [
+        19,
+        3
+      ],
+      "swish": [
+        19,
+        3
+      ]
+    },
+    "VID_20261004_114443": {
+      "rim_px": [
+        499,
+        386,
+        86
+      ],
+      "truth": [
+        30,
+        10
+      ],
+      "swish": [
+        30,
+        10
+      ]
+    },
+    "VID_20261004_115151": {
+      "rim_px": [
+        516,
+        398,
+        85
+      ],
+      "truth": [
+        20,
+        3
+      ],
+      "swish": [
+        20,
+        3
+      ]
+    },
+    "VID_20261004_115650": {
+      "rim_px": [
+        522,
+        402,
+        84
+      ],
+      "truth": [
+        30,
+        7
+      ],
+      "swish": [
+        30,
+        7
+      ]
+    },
+    "VID_20261004_120328": {
+      "rim_px": [
+        524,
+        407,
+        87
+      ],
+      "truth": [
+        49,
+        15
+      ],
+      "swish": [
+        49,
+        15
+      ]
+    },
+    "VID_20261004_121420": {
+      "rim_px": [
+        543,
+        408,
+        82
+      ],
+      "truth": [
+        10,
+        6
+      ],
+      "swish": [
+        10,
+        6
+      ]
+    }
   }
 }
