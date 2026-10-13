@@ -89,8 +89,10 @@ function ballCandidates(list, rwScaled) {
   const expected = Math.PI * (d / 2) ** 2;
   return list.filter(
     (b) =>
-      b.area > 0.35 * expected &&
-      b.area < 2.5 * expected &&
+      // Large tolérance : le cercle peut être mesuré un peu petit, et un ballon en vol plus proche
+      // de la caméra que le panier paraît plus gros. Le tri se fait ensuite sur la trajectoire.
+      b.area > 0.3 * expected &&
+      b.area < 6 * expected &&
       b.w / b.h > 0.5 &&
       b.w / b.h < 2 &&
       b.area / (b.w * b.h) >= 0.45, // un ballon remplit bien sa boîte ; une branche non
@@ -167,7 +169,8 @@ export function judge(tr, rim) {
 }
 
 // Détecteur temps réel : on lui donne les images une par une, il rend les tirs terminés.
-export function createDetector(rim, roi, scale) {
+// debug(tr, verdict) : appelé pour chaque trajectoire terminée (outil d'analyse).
+export function createDetector(rim, roi, scale, debug) {
   const W = Math.round(roi.w * scale);
   const H = Math.round(roi.h * scale);
   const rwScaled = rim.w * scale;
@@ -180,6 +183,7 @@ export function createDetector(rim, roi, scale) {
   function finishTrack(tr, out) {
     if (tr.length < 4) return;
     const r = judge(tr, rim);
+    debug?.(tr, r);
     if (!r) return;
     if (pending && Math.abs(r.t - pending.t) < MERGE) {
       pending.made ||= r.made;

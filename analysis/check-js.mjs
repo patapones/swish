@@ -18,7 +18,13 @@ const base = rimArg ? { x: rimArg[0], y: rimArg[1], w: rimArg[2] } : labels.rim_
 const rim = { x: base.x * k, y: base.y * k, w: base.w * k };
 const roi = roiFor(rim, outW, outH);
 const scale = scaleFor(rim);
-const det = createDetector(rim, roi, scale);
+// --tracks a-b : affiche les trajectoires vues entre a et b secondes (positions en largeurs de cercle)
+const win = process.argv.includes('--tracks') ? process.argv[process.argv.indexOf('--tracks') + 1].split('-').map(Number) : null;
+const det = createDetector(rim, roi, scale, win && ((tr, r) => {
+  if (tr[tr.length - 1].t < win[0] || tr[0].t > win[1]) return;
+  const pts = tr.map((p) => `(${((p.x - rim.x) / rim.w).toFixed(1)},${((p.y - rim.y) / rim.w).toFixed(1)})`);
+  console.log(`${tr[0].t.toFixed(2)}s n=${tr.length} → ${r ? (r.made ? 'MARQUÉ' : 'raté') : 'ignoré'} : ${pts.slice(0, 40).join(' ')}`);
+}));
 const { W, H } = det.size;
 
 const proc = spawn(ffmpeg, [
