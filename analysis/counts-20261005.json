@@ -1,0 +1,158 @@
+{
+  "note": "Séance du 05/10/2026 (soleil, ciel bleu, panier à contre-jour, filet en chaînes, 2e appareil). rim_px = cercle mesuré à la main (le cercle trouvé automatiquement était décalé de 20 px et trop étroit). analyse = détecteur du 13/10 sur la vidéo ; direct = séance comptée par la caméra du S24 (ancienne version, calibrage manuel). Vérité à confirmer par le joueur ; 7 écarts vérifiés à l'image donnent raison à l'analyse.",
+  "videos": {
+    "VID_20261005_121312": {
+      "rim_px": [
+        411,
+        374,
+        78
+      ],
+      "analyse": [
+        10,
+        2
+      ]
+    },
+    "VID_20261005_122216": {
+      "rim_px": [
+        402,
+        375,
+        78
+      ],
+      "analyse": [
+        10,
+        2
+      ],
+      "direct": [
+        10,
+        2
+      ]
+    },
+    "VID_20261005_122503": {
+      "rim_px": [
+        401,
+        377,
+        78
+      ],
+      "analyse": [
+        10,
+        2
+      ],
+      "direct": [
+        10,
+        2
+      ]
+    },
+    "VID_20261005_122809": {
+      "rim_px": [
+        396,
+        380,
+        78
+      ],
+      "analyse": [
+        10,
+        2
+      ],
+      "direct": [
+        10,
+        1
+      ]
+    },
+    "VID_20261005_123059": {
+      "rim_px": [
+        399,
+        376,
+        78
+      ],
+      "analyse": [
+        10,
+        3
+      ],
+      "direct": [
+        10,
+        3
+      ]
+    },
+    "VID_20261005_123446": {
+      "rim_px": [
+        399,
+        377,
+        78
+      ],
+      "analyse": [
+        10,
+        1
+      ],
+      "direct": [
+        10,
+        1
+      ]
+    },
+    "VID_20261005_123722": {
+      "rim_px": [
+        399,
+        378,
+        78
+      ],
+      "analyse": [
+        10,
+        2
+      ],
+      "direct": [
+        10,
+        2
+      ]
+    },
+    "VID_20261005_123957": {
+      "rim_px": [
+        393,
+        380,
+        78
+      ],
+      "analyse": [
+        14,
+        7
+      ],
+      "direct": [
+        10,
+        5
+      ]
+    },
+    "VID_20261005_124447": {
+      "rim_px": [
+        393,
+        382,
+        78
+      ],
+      "analyse": [
+        10,
+        2
+      ]
+    },
+    "VID_20261005_125735": {
+      "rim_px": [
+        392,
+        377,
+        78
+      ],
+      "analyse": [
+        10,
+        3
+      ]
+    },
+    "VID_20261005_130222-003": {
+      "rim_px": [
+        392,
+        378,
+        78
+      ],
+      "analyse": [
+        51,
+        11
+      ],
+      "direct": [
+        50,
+        9
+      ]
+    }
+  }
+}
