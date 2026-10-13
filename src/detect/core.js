@@ -22,8 +22,9 @@ export function roiFor(rim, videoW, videoH) {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
-// Réduction appliquée à la zone : l'arceau y fait ~54 px quelle que soit la distance.
-export const scaleFor = (rim) => Math.min(1, 54 / rim.w);
+// Mise à l'échelle de la zone : l'arceau y fait ~54 px quelle que soit la distance
+// (agrandie jusqu'à 2 fois quand le panier est filmé de loin).
+export const scaleFor = (rim) => Math.min(2, 54 / rim.w);
 
 // Ouverture morphologique (érosion puis dilatation, voisinage en croix) : enlève les pixels isolés.
 function open(mask, W, H) {

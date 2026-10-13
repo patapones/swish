@@ -362,10 +362,15 @@ function renderCamera() {
         <button class="cam-btn" data-action="cam-exit">← Séance</button>
         <div class="cam-score" data-cam-score></div>
         <span class="cam-top-right">
+          <span class="cam-zoom" data-cam-zoom hidden>
+            <button class="cam-btn" data-zoom="-1" aria-label="Dézoomer">−</button>
+            <button class="cam-btn" data-zoom="1" aria-label="Zoomer">+</button>
+          </span>
           <button class="cam-btn" data-action="voice" data-cam-mic></button>
           <button class="cam-btn" data-action="cam-recal">Recalibrer</button>
         </span>
       </div>
+      <button class="cam-btn cam-ok" data-cam-ok hidden>✓ Valider</button>
       <p class="cam-hint" data-cam-hint>Démarrage de la caméra…</p>
       <p class="cam-voice" data-cam-voice></p>
       <div class="cam-flash" data-cam-flash hidden></div>

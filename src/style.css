@@ -638,3 +638,25 @@ h2 {
 .small {
   font-size: 0.85rem;
 }
+.cam-zoom {
+  display: flex;
+  gap: 4px;
+}
+.cam-zoom .cam-btn {
+  min-width: 40px;
+  font-size: 1.1rem;
+  padding: 6px 10px;
+}
+.cam-ok {
+  position: absolute;
+  left: 50%;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  background: var(--make);
+  border-color: var(--make);
+  font-size: 1.2rem;
+  padding: 12px 28px;
+}
+.cam-zoom[hidden] {
+  display: none;
+}
