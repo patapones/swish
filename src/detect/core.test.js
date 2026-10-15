@@ -7,15 +7,15 @@ const path = (pts, t0 = 0) => pts.map(([x, y], i) => ({ t: t0 + i / 30, x, y }))
 
 describe('judge', () => {
   it('marqué : traverse le cercle puis est freiné par le filet', () => {
-    const tr = path([[380, 150], [410, 190], [440, 230], [470, 270], [495, 310], [498, 318], [499, 322], [500, 330], [502, 360], [504, 400]]);
+    const tr = path([[330, 70], [355, 110], [380, 150], [410, 190], [440, 230], [470, 270], [495, 310], [498, 318], [499, 322], [500, 330], [502, 360], [504, 400]]);
     expect(judge(tr, rim)).toMatchObject({ made: true });
   });
   it('raté : tombe devant/derrière le cercle sans être freiné', () => {
-    const tr = path([[380, 150], [410, 190], [440, 230], [470, 270], [495, 310], [497, 350], [498, 395], [499, 440]]);
+    const tr = path([[330, 70], [355, 110], [380, 150], [410, 190], [440, 230], [470, 270], [495, 310], [497, 350], [498, 395], [499, 440]]);
     expect(judge(tr, rim)).toMatchObject({ made: false });
   });
   it('raté : rebondit sur le cercle et ressort', () => {
-    const tr = path([[380, 150], [410, 190], [440, 230], [470, 270], [490, 290], [470, 250], [450, 220], [430, 200], [410, 190], [390, 200], [370, 230]]);
+    const tr = path([[330, 70], [355, 110], [380, 150], [410, 190], [440, 230], [470, 270], [490, 290], [470, 250], [450, 220], [430, 200], [410, 190], [390, 200], [370, 230]]);
     expect(judge(tr, rim)).toMatchObject({ made: false });
   });
   it('ignoré : tir de près, le ballon monte depuis le dessous du cercle', () => {

@@ -1,9 +1,8 @@
 // Mode caméra : le téléphone filme le panier et compte tout seul les tirs.
-// 1. calibrage : on touche le panier, l'écran zoome dessus, on valide ou corrige l'ellipse ;
+// 1. calibrage : on touche le panier, l'écran zoome dessus, on touche les deux bords du cercle ;
 // 2. à chaque image, la zone autour du cercle passe dans le détecteur (src/detect/core.js).
 
 import { createDetector, roiFor, scaleFor } from './detect/core.js';
-import { findRim } from './detect/rim.js';
 
 const RIM_KEY = 'swish:rim';
 const ZOOM_KEY = 'swish:zoom';
@@ -127,22 +126,9 @@ export async function startCamera(root, { onShot, onStatus }) {
     onStatus('Touche le panier : l’écran va zoomer dessus.');
   }
 
-  // Cherche le cercle par sa couleur dans la fenêtre agrandie.
-  function autoRim() {
-    const W = Math.round(lens.w);
-    const H = Math.round(lens.h);
-    const c = document.createElement('canvas');
-    c.width = W;
-    c.height = H;
-    const cx = c.getContext('2d', { willReadFrequently: true });
-    cx.drawImage(video, lens.x, lens.y, lens.w, lens.h, 0, 0, W, H);
-    const r = findRim(cx.getImageData(0, 0, W, H).data, W, H, { x: W / 2, y: H / 2 });
-    return r && r.w >= MIN_RIM ? { x: r.x + lens.x, y: r.y + lens.y, w: r.w } : null;
-  }
-
   function openLens(p) {
     const box = overlay.getBoundingClientRect();
-    const w = 0.22 * vw();
+    const w = 0.16 * vw(); // ~6x : les bords du cercle se visent facilement
     const h = Math.min(vh(), (w * box.height) / box.width);
     lens = {
       x: Math.min(vw() - w, Math.max(0, p.x - w / 2)),
@@ -152,13 +138,11 @@ export async function startCamera(root, { onShot, onStatus }) {
     };
     step = 'zoom';
     edges = [];
-    guess = autoRim();
-    okBtn.hidden = !guess;
-    onStatus(
-      guess
-        ? 'Si l’ellipse orange suit bien le cercle, touche « Valider ». Sinon touche le bord GAUCHE du cercle, puis le DROIT.'
-        : 'Touche le bord GAUCHE du cercle, puis son bord DROIT.',
-    );
+    // Pas de proposition automatique : à contre-jour, la couleur du cercle n'est pas fiable
+    // (testé sur les captures du terrain) ; deux touchers dans la loupe sont sûrs.
+    guess = null;
+    okBtn.hidden = true;
+    onStatus('Touche le bord GAUCHE du cercle, puis son bord DROIT.');
   }
 
   // Toucher → pixels vidéo, selon ce qui est affiché (vidéo entière ou loupe).

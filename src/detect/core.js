@@ -133,7 +133,8 @@ function brakedByNet(tr, i, rim) {
 }
 
 // Une trajectoire terminée : null si ce n'est pas un tir, sinon { t, made }.
-export function judge(tr, rim) {
+// roiTop : haut de la zone analysée (le panier peut être tout en haut de l'image).
+export function judge(tr, rim, roiTop = -Infinity) {
   const { x: cx, y: cy, w: rw } = rim;
   const aboveRim = tr.filter((p) => Math.abs(p.x - cx) < 2.5 * rw && p.y < cy - 0.2 * rw);
   // Un vrai tir se voit plusieurs images au-dessus du cercle ; sinon : joueur, ballon au sol, reflet…
@@ -141,6 +142,16 @@ export function judge(tr, rim) {
   // Tir de loin uniquement : le ballon doit arriver par le haut. Un ballon qui apparaît sous
   // le cercle et monte vers lui (lay-up, tir sous le panier, remise après rebond) est ignoré.
   if (tr[0].y > cy - 0.2 * rw) return null;
+  // Un tir de loin retombe de haut : on doit voir le ballon descendre dans le haut de la zone.
+  // Une cloche ou un tir près du panier reste bas et ne fait que monter ou flotter au-dessus du cercle.
+  // « Haut » = au-dessus des 60 % de la hauteur visible au-dessus du cercle (1,5 cercle si la zone est entière).
+  const high = cy - 0.6 * Math.min(2.5 * rw, cy - roiTop);
+  const fallsFromHigh = tr.some((p, i) => i > 0 && p.y < high && p.y > tr[i - 1].y + 0.05 * rw);
+  // Tir plus tendu ou caméra placée autrement : le ballon entre par le côté de la zone en descendant déjà.
+  // (Un piège qui entre par le côté, lui, monte encore.)
+  const fromSide =
+    tr.length > 2 && Math.abs(tr[0].x - cx) > 2.3 * rw && tr[0].y < cy - 0.5 * rw && tr[2].y > tr[0].y + 0.1 * rw;
+  if (!fallsFromHigh && !fromSide) return null;
   // Un ballon tiré bouge : une tache immobile (nuage, changement de lumière) n'est pas un tir.
   let movingSteps = 0;
   for (let i = 1; i < tr.length; i++) {
@@ -182,7 +193,7 @@ export function createDetector(rim, roi, scale, debug) {
 
   function finishTrack(tr, out) {
     if (tr.length < 4) return;
-    const r = judge(tr, rim);
+    const r = judge(tr, rim, roi.y);
     debug?.(tr, r);
     if (!r) return;
     if (pending && Math.abs(r.t - pending.t) < MERGE) {
