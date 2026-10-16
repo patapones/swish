@@ -102,14 +102,20 @@ function ballCandidates(list, rwScaled) {
 // Juste sous le cercle, le ballon est freiné par le filet au moins 2 images d'affilée.
 function heldByNet(tr, i, rim) {
   const { x: cx, y: cy, w: rw } = rim;
+  // Ballon resté posé sur l'arceau avant de tomber : il repart de l'arrêt, donc tombe lentement au
+  // début même à l'extérieur. Il faut alors qu'il soit vraiment bloqué dans le filet.
+  const k = Math.max(0, i - 2);
+  const fromRest = i - k === 2 && fall(tr[k], tr[i]) < 0.12 * rw;
+  const need = fromRest ? 3 : 2;
+  const maxDy = fromRest ? 0.05 * rw : 0.12 * rw;
   let slow = 0;
   for (let j = i; j < tr.length - 1; j++) {
     if (tr[j].t > tr[i].t + 0.4 || tr[j].y > cy + rw) break;
     const dt = (tr[j + 1].t - tr[j].t) * FPS;
     const dy = (tr[j + 1].y - tr[j].y) / dt;
     const inNet = cy <= tr[j].y && Math.abs(tr[j].x - cx) < 0.6 * rw;
-    slow = inNet && dy < 0.12 * rw ? slow + 1 : 0;
-    if (slow >= 2) return true;
+    slow = inNet && dy < maxDy ? slow + 1 : 0;
+    if (slow >= need) return true;
   }
   return false;
 }
@@ -121,13 +127,24 @@ const fall = (a, b) => (b.y - a.y) / ((b.t - a.t) * FPS);
 // Un ballon qui tombe devant ou derrière le cercle, lui, accélère.
 function brakedByNet(tr, i, rim) {
   const { x: cx, y: cy, w: rw } = rim;
-  const k = Math.max(0, i - 3);
+  const k = Math.max(0, i - 4);
   if (i - k < 2) return false;
-  const vIn = fall(tr[k], tr[i]);
+  // Vitesse d'arrivée = la plus grande juste avant le cercle (chute libre) : si le ballon touche
+  // l'arceau en entrant, la moyenne serait faussée à la baisse par le choc.
+  let vIn = 0;
+  for (let j = k; j < i; j++) vIn = Math.max(vIn, fall(tr[j], tr[j + 1]));
   if (vIn < 0.15 * rw) return false; // pas vraiment en train de descendre
   for (let j = i + 1; j < tr.length; j++) {
     if (tr[j].t > tr[i].t + 0.5 || Math.abs(tr[j].x - cx) > 0.6 * rw) return false;
-    if (tr[j].y > cy + 0.8 * rw) return fall(tr[i], tr[j]) < 0.6 * vIn; // sortie du filet
+    if (tr[j].y > cy + 0.8 * rw) {
+      // sortie du filet : nettement moins vite qu'à l'arrivée, ET un vrai ralentissement dans le
+      // filet (un ballon qui retombe à côté après avoir tapé l'arceau, lui, accélère sans cesse).
+      let slowedDown = false;
+      for (let m = i + 1; m < j; m++) {
+        if (fall(tr[m], tr[m + 1]) < fall(tr[m - 1], tr[m]) - 0.02 * rw) slowedDown = true;
+      }
+      return slowedDown && fall(tr[i], tr[j]) < 0.6 * vIn;
+    }
   }
   return false;
 }
@@ -171,7 +188,7 @@ export function judge(tr, rim, roiTop = -Infinity) {
     const xCross = a.x + ((cy - a.y) / (b.y - a.y)) * (b.x - a.x);
     // Vu de côté, un ballon qui tombe devant/derrière le cercle semble aussi le traverser :
     // seul le freinage par le filet prouve qu'il est rentré.
-    if (Math.abs(xCross - cx) < 0.45 * rw && (heldByNet(tr, last, rim) || brakedByNet(tr, last, rim))) {
+    if (Math.abs(xCross - cx) < 0.4 * rw && (heldByNet(tr, last, rim) || brakedByNet(tr, last, rim))) {
       const bouncedOut = tr.some((p) => p.t > b.t + 0.3 && p.y < cy - 0.3 * rw);
       made = !bouncedOut;
     }
